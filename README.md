@@ -4,8 +4,8 @@ a vuex inspired/compatible store that is synced over websockets
 [![npm version](https://badge.fury.io/js/vuex-lite-sync.svg)](https://badge.fury.io/js/vuex-lite-sync)
 [![codecov](https://codecov.io/gh/matthewfcarlson/vuex-lite-sync/branch/master/graph/badge.svg)](https://codecov.io/gh/matthewfcarlson/vuex-lite-sync)
 [![donate](https://img.shields.io/badge/$-donate-ff69b4.svg?maxAge=2592000&style=flat)](https://ko-fi.com/padgames)
-[https://img.shields.io/github/issues/matthewfcarlson/vuex-lite-sync](https://github.com/matthewfcarlson/vuex-lite-sync/issues)
-[https://img.shields.io/github/license/matthewfcarlson/vuex-lite-sync](https://github.com/matthewfcarlson/vuex-lite-sync/blob/master/LICENSE)
+[![issues](https://img.shields.io/github/issues/matthewfcarlson/vuex-lite-sync)](https://github.com/matthewfcarlson/vuex-lite-sync/issues)
+[![license](https://img.shields.io/github/license/matthewfcarlson/vuex-lite-sync)](https://github.com/matthewfcarlson/vuex-lite-sync/blob/master/LICENSE)
 
 Heavily inspired by Rayraegah's Vuex-lite https://github.com/Rayraegah/vuex-lite
 
