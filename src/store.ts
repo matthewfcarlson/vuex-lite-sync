@@ -22,7 +22,13 @@ function unifyObjectStyle(type, payload, options) {
 }
 
 export default class Store {
- 
+  public position: number;
+  protected speed: number;
+
+  constructor(position: number, speed: number) {
+      this.position = position;
+      this.speed = speed;
+  }
 }
 
 export function install(_Vue) {
