@@ -7,7 +7,7 @@ a vuex inspired/compatible store that is synced over websockets
 [![issues](https://img.shields.io/github/issues/matthewfcarlson/vuex-lite-sync)](https://github.com/matthewfcarlson/vuex-lite-sync/issues)
 [![license](https://img.shields.io/github/license/matthewfcarlson/vuex-lite-sync)](https://github.com/matthewfcarlson/vuex-lite-sync/blob/master/LICENSE)
 
-Heavily inspired by Rayraegah's Vuex-lite https://github.com/Rayraegah/vuex-lite
+Heavily inspired by Rayraegah's Vuex-lite https://github.com/Rayraegah/vuex-lite and vuex itself https://github.com/vuejs/vuex
 
 ## Features
 
@@ -34,6 +34,9 @@ Stores also need to have a way to ask for state they might have missed.
 They'll send out a message to get a replay of the mutations.
 If this still doesn't work, stores have an exception handler that can be invoked to decide what to do.
 In the case of a web app, this could be refreshing the page.
+
+Strict mode is always on! Any mutations outside of mutation handlers will throw an Error. 
+It's an unpopular stance, but I think it's a good one. If you feel strongly, open an issue and make your case.
 
 ## Using it in your project
 
@@ -69,11 +72,13 @@ import VuexLiteSynced from 'VuexLiteSynced'
 Vue.use(VuexLiteSynced)
 
 const store = new VuexLiteSynced({
-  state: {},
-  mutations: {},
-  views:{},
-  actions: {},
-  plugins: []
+  state: {}, // you can't 
+  mutations: {}, // this is the mutation
+  getters:{}, // this is the getters that present that state in nicer ways
+  actions: {}, // this is the higher level actions that transform into mutations
+  plugins: [], // this is the plugin
+  transport: null, // this is the message layer transport
+  panic_handler: null, // this is invoked when we can't recreate the state
 })
 ```
 
@@ -102,7 +107,6 @@ new Vue({
 - store.dispatch(type, payload)
 - store.subscribe(subscriber)
 - store.replaceState(newState)
-- store.mapState(map)
 - store.mapViews(map)
 - store.mapActions(map)
 - store.mapMutations(map)
