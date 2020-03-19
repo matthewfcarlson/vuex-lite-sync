@@ -1,5 +1,5 @@
 import Vue from "vue";
-import Vuex, { install } from "..";
+import Vuex, { install } from "../src";
 
 const TEST = "TEST";
 

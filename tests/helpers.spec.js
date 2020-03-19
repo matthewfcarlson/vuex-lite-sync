@@ -1,5 +1,5 @@
 import Vue from "vue";
-import Vuex from "../";
+import Vuex from "../src";
 
 // install vuex
 Vue.use(Vuex);
