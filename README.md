@@ -4,6 +4,8 @@ a vuex inspired/compatible store that is synced over websockets
 [![npm version](https://badge.fury.io/js/vuex-lite-sync.svg)](https://badge.fury.io/js/vuex-lite-sync)
 [![codecov](https://codecov.io/gh/matthewfcarlson/vuex-lite-sync/branch/master/graph/badge.svg)](https://codecov.io/gh/matthewfcarlson/vuex-lite-sync)
 [![donate](https://img.shields.io/badge/$-donate-ff69b4.svg?maxAge=2592000&style=flat)](https://ko-fi.com/padgames)
+[https://img.shields.io/github/issues/matthewfcarlson/vuex-lite-sync](https://github.com/matthewfcarlson/vuex-lite-sync/issues)
+[https://img.shields.io/github/license/matthewfcarlson/vuex-lite-sync](https://github.com/matthewfcarlson/vuex-lite-sync/blob/master/LICENSE)
 
 Heavily inspired by Rayraegah's Vuex-lite https://github.com/Rayraegah/vuex-lite
 
@@ -17,16 +19,21 @@ Heavily inspired by Rayraegah's Vuex-lite https://github.com/Rayraegah/vuex-lite
 ## How it works
 
 Each store has getter and setters, all changes to state are through mutations.
-Each mutation is stored on the log and from where the mutation came from.
+Each mutation is stored in a store specific log and from where the mutation came from.
 In addition, each mutation has the last mutation as it's parent with some logic to determine what the proper state is.
 
 Each store has a reference to some sort of message transport layer, a websocket implementation is currently the only planned implementation but there could be other instances.
 
 The idea is that you have a store on your server which stores the state as well as your client(s), and mutations are automatically mirrored across all the clients connected.
 
-In addition, there will be a web-socket
+This makes it hard to spoof state, as the mutations are verified as allowable with a parent. This makes it so a bad actor has a hard time of polluting global state. 
+However, this brings an interesting challenge of making sure all stores are up to date.
+Each store has a verion associated with it, which should be incremented when a breaking/significant change is introduced.
 
-This makes it hard to spoof state, as the mutations are verified as allowable.
+Stores also need to have a way to ask for state they might have missed. 
+They'll send out a message to get a replay of the mutations.
+If this still doesn't work, stores have an exception handler that can be invoked to decide what to do.
+In the case of a web app, this could be refreshing the page.
 
 ## Using it in your project
 
