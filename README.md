@@ -9,6 +9,8 @@ a vuex inspired/compatible store that is synced over websockets
 
 Heavily inspired by Rayraegah's Vuex-lite https://github.com/Rayraegah/vuex-lite and vuex itself https://github.com/vuejs/vuex
 
+Documentation at: https://matthewc.dev/vuex-lite-sync/
+
 ## Features
 
 - Small size, the goal is to have a 2kb state synced management library
