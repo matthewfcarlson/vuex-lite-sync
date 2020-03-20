@@ -2,7 +2,7 @@ import Vue from "vue";
 import Vuex from "../src";
 
 // install vuex
-Vue.use(Vuex);
+Vue.use(Vuex as any);
 
 // supress production tips
 Vue.config.productionTip = false;
