@@ -15,6 +15,7 @@ Heavily inspired by Rayraegah's Vuex-lite https://github.com/Rayraegah/vuex-lite
 - Similar to Vuex (with a slightly reduced feature set)
 - `vue-devtools` will work out of the box
 - Written in typescript so types are provided
+- Mutations are synced over the transport layer with logic to handle competing connections
 
 ## How it works
 
