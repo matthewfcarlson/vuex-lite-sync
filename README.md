@@ -43,6 +43,7 @@ It's an unpopular stance, but I think it's a good one. If you feel strongly, ope
 You are welcome to see the project this was developed for: padgames at https://github.com/matthewfcarlson/padgames/
 
 I've provided some documentation as well as well as a simple sample application.
+See the `examples` folder.
 
 ### Install
 
@@ -64,8 +65,8 @@ Then, `import` or `require` use just like `vuex`.
 
 #### Create store instance
 
-```js
-// store.js
+```ts
+// store.ts
 import Vue from 'vue'
 import VuexLiteSynced from 'VuexLiteSynced'
 
@@ -86,7 +87,7 @@ const store = new VuexLiteSynced({
 
 In order to access `store` in every component:
 
-```js
+```ts
 import Vue from 'vue'
 import store from './store'
 
@@ -103,12 +104,11 @@ new Vue({
 - store.state `readonly`
 - store.mutations
 - store.actions
+- store.setTransport(transport)
 - store.commit(type, payload)
-- store.dispatch(type, payload)
 - store.subscribe(subscriber)
 - store.replaceState(newState)
-- store.mapViews(map)
-- store.mapActions(map)
+- store.mapState(map)
 - store.mapMutations(map)
 
 ## Contributing
