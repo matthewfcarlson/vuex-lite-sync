@@ -2,7 +2,7 @@ import Store from '../store'
 
 const devtoolHook = typeof window !== 'undefined' && (window as any).__VUE_DEVTOOLS_GLOBAL_HOOK__
 
-export default function devtoolPlugin(store: Store) {
+export default function devtoolPlugin(store: Store<any>) {
   if (!devtoolHook) return
 
   store._devtoolHook = devtoolHook
