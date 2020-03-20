@@ -1,5 +1,6 @@
 import Vue from "vue";
 import Vuex from "../src";
+import { mapState, mapMutations } from '../src'
 
 // install vuex
 Vue.use(Vuex as any);
@@ -9,7 +10,10 @@ Vue.config.productionTip = false;
 
 describe("Helpers", () => {
   test("mapState (array)", () => {
-    const store = new Vuex.Store({
+    interface state  {
+      a: number
+    }
+    const store = new Vuex.Store<state>({
       state: {
         a: 1
       },
@@ -23,16 +27,20 @@ describe("Helpers", () => {
 
     const vm = new Vue({
       store,
-      computed: store.mapState(["a"])
+      computed: mapState(["a"])
     });
 
-    expect(vm.a).toBe(1);
+    expect((vm as any).a).toBe(1);
     store.commit("inc", 1);
-    expect(vm.a).toBe(2);
+    expect((vm as any).a).toBe(2);
   });
 
   test("mapState (object)", () => {
-    const store = new Vuex.Store({
+    interface state  {
+      a: number,
+      b: number
+    }
+    const store = new Vuex.Store<state>({
       state: {
         a: 1,
         b: 1
@@ -47,20 +55,23 @@ describe("Helpers", () => {
 
     const vm = new Vue({
       store,
-      computed: store.mapState({
-        a: state => {
+      computed: mapState({
+        a: (state:state) => {
           return state.a + state.b;
         }
       })
     });
 
-    expect(vm.a).toBe(2);
+    expect((vm as any).a).toBe(2);
     store.commit("inc", 1);
-    expect(vm.a).toBe(3);
+    expect((vm as any).a).toBe(3);
   });
 
   test("mapMutations (object)", () => {
-    const store = new Vuex.Store({
+    interface state  {
+      count: number
+    }
+    const store = new Vuex.Store<state>({
       state: { count: 0 },
       mutations: {
         inc: state => state.count++,
@@ -69,14 +80,14 @@ describe("Helpers", () => {
     });
     const vm = new Vue({
       store,
-      methods: store.mapMutations({
+      methods: mapMutations({
         plus: "inc",
         minus: "dec"
       })
     });
-    vm.plus();
+    (vm as any).plus();
     expect(store.state.count).toBe(1);
-    vm.minus();
+    (vm as any).minus();
     expect(store.state.count).toBe(0);
   });
 });

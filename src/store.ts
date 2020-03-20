@@ -29,13 +29,13 @@ import devtoolPlugin from './plugins/devtool'
 export type MutationSubscriber<P extends MutationPayload, S> = (mutation: P, state: S) => any
 export type InitialState<S> = S | (() => S) | undefined
 
-export default class SyncedStore<S> {
+export class SyncedStore<S> {
   public _devtoolHook: any
   public subscribers: MutationSubscriber<any, S>[] // TODO get rid of this any
   private committing = false
   public dispatch: Dispatch
-  public commit: Commit
-  private _vm: any
+  //public commit: Commit
+  private _vm!: RealVue
   private strict: boolean
   private mutations: MutationTree<S>
   private actions: ActionTree<S, any>
@@ -83,24 +83,57 @@ export default class SyncedStore<S> {
     const state = options.state
     this.resetStoreVM(this, state)
 
-    this.dispatch = function boundDispatch(type: any, payload: DispatchOptions | undefined) {
+    this.dispatch = function boundDispatch(type: any, payload?: DispatchOptions) {
       return dispatch.call(store, type, payload)
     }
 
-    this.commit = function boundCommit(type: any, payload: any) {
+    /*this.commit = function boundCommit(type: any, payload?: CommitOptions) {
       return commit.call(store, type, payload)
+    }*/
+
+    // Add the mutators
+    if (options.mutations) {
+      this.installMutators(options.mutations)
     }
 
     // apply plugins
     plugins.forEach(plugin => plugin(this))
+
+    // Check for dev tools
+    const useDevtools =
+      (options as any).devtools !== undefined ? (options as any).devtools : Vue.config.devtools
+    if (useDevtools) {
+      devtoolPlugin(this)
+    }
+  }
+
+  public commit<P extends Payload>(
+    mutation: P | string,
+    second?: CommitOptions | any,
+    options?: CommitOptions
+  ) {
+    const { type, payload } = unifyObjectStyle(mutation, second, options)
+
+    const handler = this.mutations[type]
+    if (!handler) assert(handler, '[vuex] Unknown mutation type ' + type)
+
+    this._withCommit(() => {
+      handler(this.state, payload)
+    })
+
+    const handle = { type, payload }
+
+    // shallow copy to prevent iterator invalidation if subscriber synchronously calls unsubscribe
+    this.subscribers.slice().forEach(sub => sub(handle, this.state))
   }
 
   public get state(): S {
-    return this._vm._data.$$state
+    if (!this._vm) assert(false, '_VM got corrupted somehow?')
+    return this._vm.$data.$$state
   }
 
   public get getters(): any {
-    assert(false, `getters is not supported`)
+    assert(false, `getters are not supported`)
     return null
   }
 
@@ -113,8 +146,7 @@ export default class SyncedStore<S> {
   }
 
   public replaceState(state: S) {
-    //this._vm.$data.$$state = state
-    return this
+    this._vm.$data.$$state = state
   }
 
   public subscribe<P extends MutationPayload>(fn: MutationSubscriber<P, S>) {
@@ -124,7 +156,7 @@ export default class SyncedStore<S> {
 
   public subscribeAction<P extends ActionPayload>(_fn: SubscribeActionOptions<P, S>): () => void {
     assert(false, 'Subscribe Action is not supported')
-    return () => assert(false, 'Subscribe Action is not supported')
+    return () => assert(false, 'Subscribe Action Callback is not supported')
   }
 
   public watch<T>(
@@ -132,7 +164,8 @@ export default class SyncedStore<S> {
     _cb: (value: T, oldValue: T) => void,
     _options?: WatchOptions
   ): () => void {
-    return () => assert(false, 'Watch is not supported')
+    assert(false, 'Watch is not supported')
+    return () => assert(false, 'Watch callback is not supported')
   }
 
   public registerModule<T>(
@@ -153,7 +186,7 @@ export default class SyncedStore<S> {
     getters?: GetterTree<S, S>
     modules?: ModuleTree<S>
   }): void {
-    assert(false, 'Hot update is not supported')
+    assert(false, 'hotUpdate is not supported')
   }
 
   private _withCommit(fn: () => void) {
@@ -163,12 +196,22 @@ export default class SyncedStore<S> {
     this.committing = committing
   }
 
-  public resetStore(store: SyncedStore<S>, hot: boolean = false) {
-    store.actions = Object.create(null)
-    store.mutations = Object.create(null)
+  /**
+   * This doesn't reset the store to zero but recreates it with the same data
+   * @param store
+   * @param hot
+   */
+  public resetStore(store?: SyncedStore<S>, hot: boolean = false) {
+    if (!store) store = this
+    //store.actions = Object.create(null)
+    //store.mutations = Object.create(null)
     const state = store.state
     // reset vm
     store.resetStoreVM(store, state, hot)
+  }
+
+  private installMutators(mutations: MutationTree<S>) {
+    forEachValue(mutations, (val, key) => (this.mutations[key] = val))
   }
 
   private resetStoreVM(store: SyncedStore<S>, state: InitialState<S>, hot: boolean = false) {
@@ -193,6 +236,11 @@ export default class SyncedStore<S> {
       })
     })
     */
+    // TODO: make sure we can still mutate
+
+    if (state) {
+      state = typeof state === 'function' ? (state as any)() : state
+    }
 
     // use a Vue instance to store the state tree
     // suppress warnings just in case the user has added
@@ -212,7 +260,7 @@ export default class SyncedStore<S> {
         // dispatch changes in all subscribed watchers
         // to force getter re-evaluation for hot reloading.
         store._withCommit(() => {
-          oldVm._data.$$state = null
+          oldVm.$data.$$state = null
         })
       }
       Vue.nextTick(() => oldVm.$destroy())
@@ -220,13 +268,43 @@ export default class SyncedStore<S> {
   }
 }
 
-export function install(_Vue: any) {
-  if (Vue && _Vue === Vue) {
+export function install(new_vue: any) {
+  if (Vue && new_vue === Vue) {
+    console.error('[vuex] already installed. Vue.use(Vuex) should be called only once.')
     if (process.env.NODE_ENV !== 'production') {
-      console.error('[vuex] already installed. Vue.use(Vuex) should be called only once.')
+      assert(false, `already installed. Vue.use(Vuex) should be called only once.`)
+      // TODO: don't bother with this?
     }
     return
   }
-  Vue = _Vue
-  //applyMixin(Vue)
+  Vue = new_vue
+  Vue.mixin({
+    beforeCreate: vuexInit
+  })
+}
+
+function vuexInit(this: RealVue) {
+  const options = this.$options
+
+  if (options.store) {
+    // store injection
+    this.$store = typeof options.store === 'function' ? (options as any).store() : options.store
+  } else if (options.parent && options.parent.$store) {
+    // store injection for children
+    this.$store = options.parent.$store
+  }
+}
+
+function unifyObjectStyle(type: string | Payload, payload?: any, options?: any) {
+  if (typeof type !== 'string' && type.type) {
+    options = payload
+    payload = type
+    type = type.type
+  }
+
+  if (process.env.NODE_ENV !== 'production') {
+    assert(typeof type === 'string', `expects string as the type, but found ${typeof type}.`)
+  }
+
+  return { type: type as string, payload, options }
 }

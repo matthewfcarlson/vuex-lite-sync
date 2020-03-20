@@ -1,8 +1,8 @@
-import Store from '../store'
+import { SyncedStore } from '../store'
 
 const devtoolHook = typeof window !== 'undefined' && (window as any).__VUE_DEVTOOLS_GLOBAL_HOOK__
 
-export default function devtoolPlugin(store: Store<any>) {
+export default function devtoolPlugin(store: SyncedStore<any>) {
   if (!devtoolHook) return
 
   store._devtoolHook = devtoolHook

@@ -1,11 +1,10 @@
-import Vue from "vue";
-import Vuex, { install } from "../src";
+import Vue from "Vue";
+import Vuex from "../src";
 
 const TEST = "TEST";
 
 // install vuex
-// TODO fix
-Vue.use(Vuex as any);
+Vue.use(Vuex);
 
 // supress production tips
 Vue.config.productionTip = false;
@@ -62,12 +61,51 @@ describe("Mutations", () => {
         }
       }
     });
-    expect(() => {
-      store.commit(undefined, 2);
-    }).toThrowError(/Expects string as the type, but found undefined/);
     expect(store.state.a).toBe(1);
   });
 });
+
+describe("Reset", () => {
+  it("should reset the store", () => {
+    const store = new Vuex.Store({
+      state: () => ({
+        a: 1
+      }),
+      mutations: {
+        [TEST](state, n) {
+          state.a += n;
+        }
+      }
+    });
+    expect(store.state.a).toBe(1);
+    store.resetStore(store);
+    // make sure we didn't lose any data
+    expect(store.state.a).toBe(1);
+    // make sure we didn't lose mutators
+    store.commit(TEST, 2);
+    expect(store.state.a).toBe(3)
+  });
+  it("should reset the store hot", () => {
+    const store = new Vuex.Store({
+      state: () => ({
+        a: 1
+      }),
+      mutations: {
+        [TEST](state, n) {
+          state.a += n;
+        }
+      }
+    });
+    expect(store.state.a).toBe(1);
+    store.resetStore(store, true);
+    // make sure we didn't lose any data
+    expect(store.state.a).toBe(1);
+    // make sure we didn't lose mutators
+    store.commit(TEST, 2);
+    expect(store.state.a).toBe(3)
+  });
+});
+
 
 describe("State", () => {
   it("should accept a function as state", () => {
@@ -128,8 +166,8 @@ describe("State", () => {
 describe("Subscriptions", () => {
   test("subscriptions / unsubscriptions", () => {
     const subscribers = {
-      one: () => {},
-      two: () => {}
+      one: () => { },
+      two: () => { }
     };
 
     const subscribeSpy = jest.spyOn(subscribers, "one");
@@ -140,7 +178,7 @@ describe("Subscriptions", () => {
     const store = new Vuex.Store({
       state: {},
       mutations: {
-        [TEST]: () => {}
+        [TEST]: () => { }
       }
     });
 
@@ -159,12 +197,10 @@ describe("Subscriptions", () => {
     expect(subscribeSpy).toHaveBeenCalledTimes(1);
     expect(secondSubscribeSpy).toHaveBeenCalledTimes(2);
   });
+
 });
 
 describe("Store", () => {
-  it("cannot be called as a function", () => {
-    expect(typeof(Vuex.Store)).not.toBe("function");
-  });
 
   test("injection", () => {
     const store = new Vuex.Store({ state: { a: 1 } });
@@ -177,9 +213,9 @@ describe("Store", () => {
 
   test("plugins", () => {
     const myplugins = {
-      logger: _store => {
+      logger: (_store: any) => {
         // called when the store is initialized
-        _store.subscribe((mutation, state) => {
+        _store.subscribe((mutation: any, state: any) => {
           // called after every mutation.
           // The mutation comes in the format of `{ type, payload }`.
           return true;
@@ -210,7 +246,80 @@ describe("Store", () => {
 
   test("install", () => {
     expect(() => {
-      install(Vue);
+      Vuex.install(Vue);
     }).toThrowError(/already installed/);
+  });
+
+  test("watch", () => {
+    expect(() => {
+      interface state {
+        a: number
+      }
+      const store = new Vuex.Store<state>({
+        state: { a: 1 },
+        mutations: {
+          [TEST]: state => state.a++
+        }
+      });
+      store.watch(state => state.a, (_value, _old)=> {});
+      store.commit(TEST);
+    }).toThrowError(/Watch is not supported/);
+  });
+
+  test("registerModule", () => {
+    expect(() => {
+      interface state {
+        a: number
+      }
+      const store = new Vuex.Store<state>({
+        state: { a: 1 },
+        mutations: {
+          [TEST]: state => state.a++
+        }
+      });
+      store.registerModule("test", {});
+    }).toThrowError(/registerModule is not supported/);
+  });
+  test("unregisterModule", () => {
+    expect(() => {
+      interface state {
+        a: number
+      }
+      const store = new Vuex.Store<state>({
+        state: { a: 1 },
+        mutations: {
+          [TEST]: state => state.a++
+        }
+      });
+      store.unregisterModule("test");
+    }).toThrowError(/unregisterModule is not supported/);
+  });
+  test("hotUpdate", () => {
+    expect(() => {
+      interface state {
+        a: number
+      }
+      const store = new Vuex.Store<state>({
+        state: { a: 1 },
+        mutations: {
+          [TEST]: state => state.a++
+        }
+      });
+      store.hotUpdate({});
+    }).toThrowError(/hotUpdate is not supported/);
+  });
+  test("hotUpdate", () => {
+    expect(() => {
+      interface state {
+        a: number
+      }
+      const store = new Vuex.Store<state>({
+        state: { a: 1 },
+        mutations: {
+          [TEST]: state => state.a++
+        }
+      });
+      console.log(store.getters);
+    }).toThrowError(/getters are not supported/);
   });
 });
