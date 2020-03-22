@@ -10,7 +10,7 @@ export const mapState = normalizeNamespace((namespace: any, states: [] | {}) => 
   const res: any = {}
   if (process.env.NODE_ENV !== 'production' && !isValidMap(states)) {
     console.error('[vuex] mapState: mapper parameter must be either an Array or an Object')
-    console.log(states)
+    console.error(states)
   }
   normalizeMap(states).forEach(({ key, val }) => {
     res[key] = function mappedState() {
@@ -35,7 +35,7 @@ export const mapMutations = normalizeNamespace((namespace: any, mutations: any) 
   if (process.env.NODE_ENV !== 'production' && !isValidMap(mutations)) {
     console.error('[vuex] mapMutations: mapper parameter must be either an Array or an Object')
   }
-  console.log(mutations)
+  console.error(mutations)
   normalizeMap(mutations).forEach(({ key, val }) => {
     res[key] = function mappedMutation(...args: any[]) {
       // Get the commit method from store

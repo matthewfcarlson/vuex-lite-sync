@@ -21,10 +21,15 @@ import {
 } from 'vuex'
 import { forEachValue, isObject, isPromise, assert, partial } from './utils'
 
+export interface SyncCommitOptions extends CommitOptions {
+  external?: boolean // is this something that was triggered externally
+}
+
 let Vue: any
 
 // connects to vuex devtools
 import devtoolPlugin from './plugins/devtool'
+import { ITransporter, ITransportPacket, TransportReceiveCallback } from './transporter'
 
 export type MutationSubscriber<P extends MutationPayload, S> = (mutation: P, state: S) => any
 export type InitialState<S> = S | (() => S) | undefined
@@ -34,10 +39,13 @@ export class SyncedStore<S> {
   public subscribers: MutationSubscriber<any, S>[] // TODO get rid of this any
   private committing = false
   public dispatch: Dispatch
+  private boundReceive: TransportReceiveCallback
   //public commit: Commit
   private _vm!: RealVue
   private strict: boolean
+  private clientId: string
   private mutations: MutationTree<S>
+  private transports: ITransporter[]
   private actions: ActionTree<S, any>
   /*
    private _vm: Vue;
@@ -55,7 +63,7 @@ export class SyncedStore<S> {
 
   constructor(options: StoreOptions<S>) {
     const store = this
-    const { dispatch, commit } = this
+    const { dispatch, commit, receiveTransport } = this
 
     // Auto install if it is not done yet and `window` has `Vue`.
     // To allow users to avoid auto-installation in some cases,
@@ -87,9 +95,9 @@ export class SyncedStore<S> {
       return dispatch.call(store, type, payload)
     }
 
-    /*this.commit = function boundCommit(type: any, payload?: CommitOptions) {
-      return commit.call(store, type, payload)
-    }*/
+    this.boundReceive = function boundReceive(packet: ITransportPacket) {
+      return receiveTransport.call(store, packet)
+    }
 
     // Add the mutators
     if (options.mutations) {
@@ -105,17 +113,44 @@ export class SyncedStore<S> {
     if (useDevtools) {
       devtoolPlugin(this)
     }
+
+    this.transports = []
+
+    // Generate a random client ID just for kicks
+    this.clientId = (Math.floor(Math.random() * 1000) + 1).toString() //right now just between 1 and 1000
+  }
+
+  public addTransport(transporter: ITransporter) {
+    transporter.setReceive(this.boundReceive, this.clientId)
+    this.transports.push(transporter)
+  }
+
+  public setClientId(id: string) {
+    this.clientId = id
+  }
+
+  private receiveTransport(packet: ITransportPacket) {
+    // Verify that the packet is good? Possibly reject the packet?
+    // how to prevent us from sending this packet out again
+    const result = this.commit(packet.action, packet.payload, { external: true })
+    if (!result) {
+      // let the transport know it was a bad packet
+      console.error('Bad packet')
+    }
   }
 
   public commit<P extends Payload>(
     mutation: P | string,
-    second?: CommitOptions | any,
-    options?: CommitOptions
-  ) {
-    const { type, payload } = unifyObjectStyle(mutation, second, options)
+    data?: SyncCommitOptions | any,
+    _options?: SyncCommitOptions
+  ): boolean {
+    const { type, payload, options } = unifyObjectStyle(mutation, data, _options)
 
     const handler = this.mutations[type]
-    if (!handler) assert(handler, '[vuex] Unknown mutation type ' + type)
+    if (!handler) {
+      assert(handler, '[vuex] Unknown mutation type ' + type)
+      return false
+    }
 
     this._withCommit(() => {
       handler(this.state, payload)
@@ -125,6 +160,20 @@ export class SyncedStore<S> {
 
     // shallow copy to prevent iterator invalidation if subscriber synchronously calls unsubscribe
     this.subscribers.slice().forEach(sub => sub(handle, this.state))
+
+    // Update all the transport
+    const packet = {
+      action: type,
+      payload: payload,
+      sourceId: this.clientId,
+      msSinceLastPacket: 0,
+      packetId: 0,
+      previousPacketId: 0
+    }
+
+    if (!options || (options && !options.external)) this.transports.forEach(x => x.send(packet))
+
+    return true
   }
 
   public get state(): S {
@@ -295,7 +344,11 @@ function vuexInit(this: RealVue) {
   }
 }
 
-function unifyObjectStyle(type: string | Payload, payload?: any, options?: any) {
+function unifyObjectStyle(
+  type: string | Payload,
+  payload?: any | SyncCommitOptions,
+  options?: SyncCommitOptions
+): { type: string; payload?: any; options?: SyncCommitOptions } {
   if (typeof type !== 'string' && type.type) {
     options = payload
     payload = type

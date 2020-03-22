@@ -13,7 +13,7 @@ Documentation at: https://matthewc.dev/vuex-lite-sync/
 
 ## Features
 
-- Small size, the goal is to have a 5kb state synced management library
+- Small size, the goal is to have a 10kb state synced management library
 - Similar to Vuex (with a slightly reduced feature set)
 - `vue-devtools` will work out of the box
 - Written in typescript so types are provided

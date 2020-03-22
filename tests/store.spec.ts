@@ -319,7 +319,7 @@ describe("Store", () => {
           [TEST]: state => state.a++
         }
       });
-      console.log(store.getters);
+      console.error(store.getters);
     }).toThrowError(/getters are not supported/);
   });
 });
