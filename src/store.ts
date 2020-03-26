@@ -40,26 +40,12 @@ export class SyncedStore<S> {
   private committing = false
   public dispatch: Dispatch
   private boundReceive: TransportReceiveCallback
-  //public commit: Commit
   private _vm!: RealVue
   private strict: boolean
   private clientId: string
   private mutations: MutationTree<S>
   private transports: ITransporter[]
   private actions: ActionTree<S, any>
-  /*
-   private _vm: Vue;
-  public mutations: MutationTree;
-  readonly getters: any;
-  public plugins: Plugin<S>[];
-  public subscribers: ActionSubscriber<S>[];
-  private committing = false;
-  public commit: Commit;
-  public dispatch: Dispatch;
-  public _devtoolHook: any;
-  public mapState: (states: S) => any;
-  public mapMutations: (map: any) => any;
-  */
 
   constructor(options: StoreOptions<S>) {
     const store = this

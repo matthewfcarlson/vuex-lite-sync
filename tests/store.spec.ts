@@ -261,7 +261,7 @@ describe("Store", () => {
           [TEST]: state => state.a++
         }
       });
-      store.watch(state => state.a, (_value, _old)=> {});
+      store.watch(state => state.a, (_value, _old) => { });
       store.commit(TEST);
     }).toThrowError(/Watch is not supported/);
   });
@@ -321,5 +321,36 @@ describe("Store", () => {
       });
       console.error(store.getters);
     }).toThrowError(/getters are not supported/);
+  });
+});
+
+describe("Multiple Stores", () => {
+  it("should be able to be created", () => {
+    function createStore(val: number) {
+      return new Vuex.Store({
+        state: () => ({
+          a: val
+        }),
+        mutations: {
+          [TEST](state, n) {
+            state.a += n;
+          }
+        }
+      });
+    }
+    const NUM_STORES = 1000;
+    var stores = [];
+    for (var i = 0; i < NUM_STORES; i++) {
+      stores.push(createStore(i));
+    }
+    expect(stores.length).toBe(NUM_STORES);
+    for (var i = 0; i < NUM_STORES; i++) {
+      expect(stores[i].state.a).toBe(i);
+    }
+    for (var i = 0; i < NUM_STORES; i++) {
+      stores[i].commit(TEST, 2);
+      expect(stores[i].state.a).toBe(i+2);
+    }
+    
   });
 });
