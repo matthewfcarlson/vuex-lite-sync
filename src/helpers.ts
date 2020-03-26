@@ -34,8 +34,8 @@ export const mapMutations = normalizeNamespace((namespace: any, mutations: any) 
   const res: any = {}
   if (process.env.NODE_ENV !== 'production' && !isValidMap(mutations)) {
     console.error('[vuex] mapMutations: mapper parameter must be either an Array or an Object')
+    console.error(mutations)
   }
-  console.error(mutations)
   normalizeMap(mutations).forEach(({ key, val }) => {
     res[key] = function mappedMutation(...args: any[]) {
       // Get the commit method from store

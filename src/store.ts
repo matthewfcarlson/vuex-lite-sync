@@ -29,7 +29,8 @@ let Vue: any
 
 // connects to vuex devtools
 import devtoolPlugin from './plugins/devtool'
-import { ITransporter, ITransportPacket, TransportReceiveCallback } from './transporter'
+import { ITransporter, ITransportPacket } from './transporter'
+import { boundMethod } from 'autobind-decorator'
 
 export type MutationSubscriber<P extends MutationPayload, S> = (mutation: P, state: S) => any
 export type InitialState<S> = S | (() => S) | undefined
@@ -38,18 +39,16 @@ export class SyncedStore<S> {
   public _devtoolHook: any
   public subscribers: MutationSubscriber<any, S>[] // TODO get rid of this any
   private committing = false
-  public dispatch: Dispatch
-  private boundReceive: TransportReceiveCallback
   private _vm!: RealVue
   private strict: boolean
   private clientId: string
   private mutations: MutationTree<S>
   private transports: ITransporter[]
   private actions: ActionTree<S, any>
+  private commitLog: any[]
 
   constructor(options: StoreOptions<S>) {
     const store = this
-    const { dispatch, commit, receiveTransport } = this
 
     // Auto install if it is not done yet and `window` has `Vue`.
     // To allow users to avoid auto-installation in some cases,
@@ -74,16 +73,10 @@ export class SyncedStore<S> {
     this.subscribers = []
     this.actions = {}
 
+    this.commitLog = []
+
     const state = options.state
     this.resetStoreVM(this, state)
-
-    this.dispatch = function boundDispatch(type: any, payload?: DispatchOptions) {
-      return dispatch.call(store, type, payload)
-    }
-
-    this.boundReceive = function boundReceive(packet: ITransportPacket) {
-      return receiveTransport.call(store, packet)
-    }
 
     // Add the mutators
     if (options.mutations) {
@@ -103,11 +96,15 @@ export class SyncedStore<S> {
     this.transports = []
 
     // Generate a random client ID just for kicks
-    this.clientId = (Math.floor(Math.random() * 1000) + 1).toString() //right now just between 1 and 1000
+    this.clientId = (Math.floor(Math.random() * 5000) + 1).toString() //right now just between 1 and 1000
+  }
+
+  public get ClientId() {
+    return this.clientId
   }
 
   public addTransport(transporter: ITransporter) {
-    transporter.setReceive(this.boundReceive, this.clientId)
+    transporter.setReceive(this.receiveTransport, this.clientId)
     this.transports.push(transporter)
   }
 
@@ -115,6 +112,19 @@ export class SyncedStore<S> {
     this.clientId = id
   }
 
+  //(payloadWithType: P, options?: DispatchOptions) or type: string, payload?: any, options?: DispatchOptions
+  public dispatch<P extends Payload>(
+    _payloadOrType: P | string,
+    _payloadOrOptions?: any | DispatchOptions,
+    _options?: DispatchOptions
+  ): Promise<any> {
+    assert(false, "We don't do dispatch")
+    return new Promise<any>(resolve => {
+      assert(false, "We don't do dispatch")
+    })
+  }
+
+  @boundMethod
   private receiveTransport(packet: ITransportPacket) {
     // Verify that the packet is good? Possibly reject the packet?
     // how to prevent us from sending this packet out again
@@ -125,6 +135,16 @@ export class SyncedStore<S> {
     }
   }
 
+  public hasTransports() {
+    return this.transports.length > 0
+  }
+
+  public closeTransports() {
+    this.transports.forEach(x => x.close())
+    this.transports = []
+  }
+
+  @boundMethod
   public commit<P extends Payload>(
     mutation: P | string,
     data?: SyncCommitOptions | any,
@@ -138,28 +158,36 @@ export class SyncedStore<S> {
       return false
     }
 
-    this._withCommit(() => {
-      handler(this.state, payload)
-    })
-
     const handle = { type, payload }
+
+    const result = this._withCommit(() => {
+      return handler(this.state, payload)
+    })
+    if (result === false) return false // the commit failed to apply if we return false
+    this.commitLog.push(handle)
 
     // shallow copy to prevent iterator invalidation if subscriber synchronously calls unsubscribe
     this.subscribers.slice().forEach(sub => sub(handle, this.state))
 
-    // Update all the transport
-    const packet = {
-      action: type,
-      payload: payload,
-      sourceId: this.clientId,
-      msSinceLastPacket: 0,
-      packetId: 0,
-      previousPacketId: 0
+    if (this.hasTransports() && (!options || (options && !options.external))) {
+      // Update all the transport
+      const packet = {
+        action: type,
+        payload: payload,
+        sourceId: this.clientId,
+        msSinceLastPacket: 0,
+        packetId: 0,
+        previousPacketId: 0
+      }
+      this.transports.forEach(x => x.send(packet))
     }
 
-    if (!options || (options && !options.external)) this.transports.forEach(x => x.send(packet))
-
     return true
+  }
+
+  @boundMethod
+  public dumpLog() {
+    console.log(this.clientId, ' commit log: ', this.commitLog)
   }
 
   public get state(): S {
@@ -180,6 +208,7 @@ export class SyncedStore<S> {
     assert(false, `Use store.replaceState() to explicitly replace state.`)
   }
 
+  @boundMethod
   public replaceState(state: S) {
     this._vm.$data.$$state = state
   }
@@ -224,11 +253,13 @@ export class SyncedStore<S> {
     assert(false, 'hotUpdate is not supported')
   }
 
-  private _withCommit(fn: () => void) {
+  @boundMethod
+  private _withCommit(fn: () => boolean) {
     const committing = this.committing
     this.committing = true
-    fn()
+    const result = fn()
     this.committing = committing
+    return result
   }
 
   /**
@@ -245,6 +276,7 @@ export class SyncedStore<S> {
     store.resetStoreVM(store, state, hot)
   }
 
+  @boundMethod
   private installMutators(mutations: MutationTree<S>) {
     forEachValue(mutations, (val, key) => (this.mutations[key] = val))
   }
@@ -296,6 +328,7 @@ export class SyncedStore<S> {
         // to force getter re-evaluation for hot reloading.
         store._withCommit(() => {
           oldVm.$data.$$state = null
+          return true
         })
       }
       Vue.nextTick(() => oldVm.$destroy())

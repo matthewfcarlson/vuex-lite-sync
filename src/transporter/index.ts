@@ -4,6 +4,7 @@ export interface ITransporter {
   readonly type: string
   send: (fn: ITransportPacket) => void
   setReceive: (fn: TransportReceiveCallback, clientId: string) => void
+  close: () => void
 }
 
 export interface ITransportPacket {
